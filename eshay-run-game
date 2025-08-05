@@ -1,1 +1,97 @@
+const config = {
+  type: Phaser.AUTO,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  parent: 'game-container',
+  physics: {
+    default: 'arcade',
+    arcade: { gravity: { y: 1000 }, debug: false }
+  },
+  scene: { preload, create, update }
+};
+
+let player, coins, trains;
+let gameStarted = false;
+let score = 0;
+let scoreText, startText;
+let swipeStartX = 0;
+
+const game = new Phaser.Game(config);
+
+function preload() {
+  this.load.image('player', 'https://upload.wikimedia.org/wikipedia/commons/3/37/Stickman_running.png');
+  this.load.image('coin', 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Pixel_coin.png');
+  this.load.image('train', 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/VLocity_Train_icon.png/64px-VLocity_Train_icon.png');
+}
+
+function create() {
+  startText = this.add.text(config.width / 2, config.height / 2, 'TAP TO PLAY', {
+    fontSize: '32px', fill: '#fff'
+  }).setOrigin(0.5);
+
+  scoreText = this.add.text(20, 20, 'Score: 0', {
+    fontSize: '24px', fill: '#fff'
+  });
+
+  player = this.physics.add.sprite(config.width / 2, config.height - 150, 'player').setScale(0.3);
+  player.setCollideWorldBounds(true).setVisible(false);
+
+  coins = this.physics.add.group();
+  trains = this.physics.add.group();
+
+  this.physics.add.overlap(player, coins, collectCoin, null, this);
+  this.physics.add.collider(player, trains, hitTrain, null, this);
+
+  this.input.on('pointerdown', pointer => {
+    if (!gameStarted) {
+      startGame.call(this);
+    } else {
+      swipeStartX = pointer.x;
+    }
+  });
+
+  this.input.on('pointerup', pointer => {
+    if (!gameStarted) return;
+    const deltaX = pointer.x - swipeStartX;
+    if (deltaX > 50) player.setVelocityX(200);
+    else if (deltaX < -50) player.setVelocityX(-200);
+    else player.setVelocityX(0);
+  });
+}
+
+function startGame() {
+  gameStarted = true;
+  startText.destroy();
+  player.setVisible(true);
+
+  this.time.addEvent({ delay: 1000, callback: spawnCoin, callbackScope: this, loop: true });
+  this.time.addEvent({ delay: 2000, callback: spawnTrain, callbackScope: this, loop: true });
+}
+
+function spawnCoin() {
+  const x = Phaser.Math.Between(50, config.width - 50);
+  const coin = coins.create(x, -50, 'coin').setVelocityY(200);
+}
+
+function spawnTrain() {
+  const x = Phaser.Math.Between(50, config.width - 50);
+  const train = trains.create(x, -100, 'train').setVelocityY(300);
+}
+
+function collectCoin(player, coin) {
+  coin.destroy();
+  score += 10;
+  scoreText.setText('Score: ' + score);
+}
+
+function hitTrain(player, train) {
+  this.scene.pause();
+  this.add.text(config.width / 2, config.height / 2, 'GAME OVER', {
+    fontSize: '40px', fill: '#ff0000'
+  }).setOrigin(0.5);
+}
+
+function update() {
+  if (!gameStarted) return;
+}
 
